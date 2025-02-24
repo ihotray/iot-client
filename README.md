@@ -31,19 +31,16 @@ iot-client [OPTIONS]
 ```
 Options:
   -s ADDR  - 本地MQTT服务器地址,默认:mqtt://localhost:1883
-  -i ID    - 云端MQTT客户端ID,默认:NULL
-  -S ADDR  - 云端MQTT服务器地址,默认:mqtts://mqtt.iot.hotray.cn:8883
   -a n     - 本地MQTT心跳间隔(秒),默认:6
-  -A n     - 云端MQTT心跳间隔(秒),默认:6
   -C CA    - TLS CA证书路径
   -c CERT  - TLS 客户端证书路径
   -k KEY   - TLS 客户端私钥路径
-  -u USER  - 云端MQTT用户名
-  -p PASS  - 云端MQTT密码
   -d ADDR  - DNS服务器地址,默认:udp://119.29.29.29:53
   -t n     - DNS超时时间(秒),默认:6
   -x PATH  - Lua回调脚本路径,默认:/www/iot/handler/iot-client.lua
   -v LEVEL - 调试级别(0-4),默认:2
+
+* 内置dns服务器为腾讯云，防止在某些地区无法访问，请指定可用的服务器
 ```
 
 ## 示例
@@ -51,10 +48,7 @@ Options:
 连接本地MQTT服务器并使用TLS连接云平台:
 
 ```bash
-iot-client -s mqtt://localhost:1883 \
-           -S mqtts://mqtt.iot.hotray.cn:8883 \
-           -u device1 -p secret \
-           -C ca.crt -c client.crt -k client.key
+iot-client
 ```
 
 ## Lua回调脚本
@@ -62,6 +56,26 @@ iot-client -s mqtt://localhost:1883 \
 iot-client支持使用Lua脚本处理设备事件和生成上报数据。回调脚本需实现以下接口:
 
 ```lua
+--- 启动时获取云端配置
+local function get_config()
+    -- get mqtt config
+    local config = {
+        code = 0, -- 0: success, other: failed
+        data = {
+            address = "mqtt://10.5.2.37:11883",
+            user = "test",
+            password = "test",
+            client_id = 'test',
+            topic_sub = "topic1",
+            topic_pub = "topic2",
+            qos = 0,
+            keepalive = 60
+        }
+    }
+
+    return cjson.encode(config)
+end
+
 -- 生成上报请求，由iot-rpcd生成回复后发到云端
 function gen_request()
     return {
