@@ -8,6 +8,6 @@
 void local_mqtt_msg_callback(struct mg_connection *c, struct mg_str topic, struct mg_str data);
 void cloud_mqtt_msg_callback(struct mg_connection *c, struct mg_str topic, struct mg_str data);
 void cloud_mqtt_event_callback(struct mg_mgr *mgr, const char* event);
-struct mg_str lua_callback(void *arg, const char *method, const char *data);
+void lua_callback(void *arg, const char *method, const char *data, struct mg_str *out);
 
 #endif

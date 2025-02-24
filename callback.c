@@ -7,10 +7,9 @@
 #include "mqtt.h"
 #include "client.h"
 
-struct mg_str lua_callback(void *arg, const char *method, const char *data) {
+void lua_callback(void *arg, const char *method, const char *data, struct mg_str *out) {
     struct client_private *priv = (struct client_private*)((struct mg_mgr*)arg)->userdata;
     const char *ret = NULL;
-    struct mg_str request = MG_NULL_STR;
     lua_State *L = luaL_newstate();
 
     luaL_openlibs(L);
@@ -43,13 +42,13 @@ struct mg_str lua_callback(void *arg, const char *method, const char *data) {
     //MG_INFO(("ret: %s", ret));
 
     //must free by caller
-    request = mg_strdup(mg_str(ret));
+    if (out)
+        *out = mg_strdup(mg_str(ret));
 
 done:
     if (L)
         lua_close(L);
 
-    return request;
 }
 
 
@@ -64,14 +63,11 @@ void cloud_mqtt_event_callback(struct mg_mgr *mgr, const char* event) {
 
     MG_INFO(("callback on_event: %s", params));
 
-    struct mg_str ret = lua_callback(mgr, "on_event", params);
+    //don't care the return value
+    lua_callback(mgr, "on_event", params, NULL);
 
     free(params);
     cJSON_Delete(root);
-    if (ret.ptr) {
-        MG_DEBUG(("ret: %.*s", (int) ret.len, ret.ptr));
-        free((void*)ret.ptr);
-    }
 }
 
 

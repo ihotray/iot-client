@@ -32,7 +32,8 @@ void timer_report_fn(void *arg) {
         return;
     }
 
-    struct mg_str ret = lua_callback(arg, "gen_request", "");
+    struct mg_str ret;
+    lua_callback(arg, "gen_request", "", &ret);
 
     if (!ret.ptr) {
         MG_DEBUG(("no report data"));
