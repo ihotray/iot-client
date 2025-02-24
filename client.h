@@ -12,7 +12,10 @@ struct client_option {
     const char *cloud_mqtt_serve_address;
     const char *cloud_mqtt_username;
     const char *cloud_mqtt_password;
+    const char *topic_sub;
+    const char *topic_pub;
     int cloud_mqtt_keepalive;
+    int cloud_mqtt_qos;
 
     const char *cloud_mqtts_ca;
     const char *cloud_mqtts_cert;
@@ -28,6 +31,7 @@ struct client_option {
 
 struct client_config {
     struct client_option *opts;
+    void *cloud_mqtt_cfg;
 };
 
 struct client_private {

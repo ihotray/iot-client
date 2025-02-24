@@ -27,8 +27,8 @@ void timer_report_fn(void *arg) {
     struct client_private *priv = (struct client_private*)((struct mg_mgr*)arg)->userdata;
     cJSON *root = NULL;
     char *printed = NULL;
-    if (!priv->mqtt_conn) {
-        MG_ERROR(("mqtt client not connected"));
+    if (!priv->mqtt_conn || !priv->cloud_mqtt_conn) {
+        MG_DEBUG(("mqtt client not connected"));
         return;
     }
 

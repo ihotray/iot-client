@@ -5,6 +5,15 @@
 #include "client.h"
 #include "callback.h"
 
+#define CHECK_JSON_NODE(root, node, typ)    \
+    do {    \
+        if (!cJSON_Is##typ(node)) {    \
+            MG_ERROR(("invalid json node: %s", #node));    \
+            cJSON_Delete(root);    \
+            return -1;    \
+        }  \
+    } while(0)
+
 static void mqtt_ev_open_cb(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
     MG_INFO(("mqtt client connection created"));
 }
@@ -214,10 +223,9 @@ static void cloud_mqtt_ev_mqtt_open_cb(struct mg_connection *c, int ev, void *ev
     MG_INFO(("connect to mqtt server: %s", priv->cfg.opts->cloud_mqtt_serve_address));
     struct mg_mqtt_opts sub_opts;
     memset(&sub_opts, 0, sizeof(sub_opts));
-    char *topic = "TODO";
-    struct mg_str subt = mg_str(topic);
+    struct mg_str subt = mg_str(priv->cfg.opts->topic_sub);
     sub_opts.topic = subt;
-    sub_opts.qos = MQTT_QOS;
+    sub_opts.qos = priv->cfg.opts->cloud_mqtt_qos;
     mg_mqtt_sub(c, &sub_opts);
     MG_INFO(("subscribed to %.*s", (int) subt.len, subt.ptr));
 
@@ -286,6 +294,82 @@ static void cloud_mqtt_cb(struct mg_connection *c, int ev, void *ev_data, void *
     }
 }
 
+/*
+0     : success
+other : failed
+
+config = {
+    code = 0,
+    data = {
+        address = "mqtt://10.5.2.37:11883",
+        user = "",
+        password = "",
+        client_id = 'test',
+        topic_sub = "topic1",
+        topic_pub = "topic2",
+        qos = 0,
+        keepalive = 60
+    }
+}
+*/
+static int cloud_mqtt_config_load(void *arg) {
+    struct mg_mgr *mgr = (struct mg_mgr *)arg;
+    struct client_private *priv = (struct client_private*)mgr->userdata;
+    cJSON *root = NULL;
+
+    struct mg_str ret;
+    lua_callback(arg, "get_config", "", &ret);
+
+    if (!ret.ptr) {
+        MG_ERROR(("no cloud mqtt config"));
+        return -1;
+    }
+
+    MG_DEBUG(("cloud mqtt config: %.*s", (int) ret.len, ret.ptr));
+
+    root = cJSON_ParseWithLength(ret.ptr, ret.len);
+    free((void*)ret.ptr);
+
+    if (!root) {
+        MG_ERROR(("parse cloud mqtt config failed"));
+        return -1;
+    }
+
+    cJSON *code = cJSON_GetObjectItem(root, FIELD_CODE);
+    if ( !cJSON_IsNumber(code) || cJSON_GetNumberValue(code) != 0 ) {
+        MG_ERROR(("cloud mqtt config code error"));
+        cJSON_Delete(root);
+        return -1;
+    }
+
+    cJSON *data = cJSON_GetObjectItem(root, FIELD_DATA);
+
+    CHECK_JSON_NODE(root, cJSON_GetObjectItem(data, "address"), String);
+    CHECK_JSON_NODE(root, cJSON_GetObjectItem(data, "client_id"), String);
+    CHECK_JSON_NODE(root, cJSON_GetObjectItem(data, "user"), String);
+    CHECK_JSON_NODE(root, cJSON_GetObjectItem(data, "password"), String);
+    CHECK_JSON_NODE(root, cJSON_GetObjectItem(data, "topic_sub"), String);
+    CHECK_JSON_NODE(root, cJSON_GetObjectItem(data, "topic_pub"), String);
+    CHECK_JSON_NODE(root, cJSON_GetObjectItem(data, "qos"), Number);
+    CHECK_JSON_NODE(root, cJSON_GetObjectItem(data, "keepalive"), Number);
+
+    priv->cfg.opts->cloud_mqtt_serve_address = cJSON_GetStringValue(cJSON_GetObjectItem(data, "address"));
+    priv->cfg.opts->cloud_mqtt_client_id = cJSON_GetStringValue(cJSON_GetObjectItem(data, "client_id"));
+    priv->cfg.opts->cloud_mqtt_username = cJSON_GetStringValue(cJSON_GetObjectItem(data, "user"));
+    priv->cfg.opts->cloud_mqtt_password = cJSON_GetStringValue(cJSON_GetObjectItem(data, "password"));
+    priv->cfg.opts->topic_sub = cJSON_GetStringValue(cJSON_GetObjectItem(data, "topic_sub"));
+    priv->cfg.opts->topic_pub = cJSON_GetStringValue(cJSON_GetObjectItem(data, "topic_pub"));
+    priv->cfg.opts->cloud_mqtt_qos = cJSON_GetNumberValue(cJSON_GetObjectItem(data, "qos"));
+    priv->cfg.opts->cloud_mqtt_keepalive = cJSON_GetNumberValue(cJSON_GetObjectItem(data, "keepalive"));
+
+    //free prev config
+    if ( priv->cfg.cloud_mqtt_cfg ) {
+        cJSON_Delete(priv->cfg.cloud_mqtt_cfg);
+    }
+    priv->cfg.cloud_mqtt_cfg = root;
+    return 0;
+
+}
 
 // Timer function - recreate client connection if it is closed
 void timer_cloud_mqtt_fn(void *arg) {
@@ -293,7 +377,8 @@ void timer_cloud_mqtt_fn(void *arg) {
     struct client_private *priv = (struct client_private*)mgr->userdata;
     uint64_t now = mg_millis();
 
-    if (priv->cloud_mqtt_conn == NULL) {
+    if ( priv->cloud_mqtt_conn == NULL && !cloud_mqtt_config_load(arg) ) {
+
         struct mg_mqtt_opts opts = { 0 };
 
         if (priv->cfg.opts->cloud_mqtt_client_id) {
@@ -301,7 +386,7 @@ void timer_cloud_mqtt_fn(void *arg) {
         }
 
         opts.clean = true;
-        opts.qos = MQTT_QOS;
+        opts.qos = priv->cfg.opts->cloud_mqtt_qos;
         opts.message = mg_str("goodbye");
         opts.keepalive = priv->cfg.opts->cloud_mqtt_keepalive;
         opts.version = 4;
@@ -312,7 +397,7 @@ void timer_cloud_mqtt_fn(void *arg) {
         priv->cloud_ping_active = now;
         priv->cloud_pong_active = now;
 
-    } else if (priv->cfg.opts->cloud_mqtt_keepalive) { //need keep alive
+    } else if (priv->cloud_mqtt_conn && priv->cfg.opts->cloud_mqtt_keepalive) { //need keep alive
         
         if (now < priv->cloud_ping_active) {
             MG_INFO(("system time loopback"));
@@ -324,6 +409,7 @@ void timer_cloud_mqtt_fn(void *arg) {
             priv->cloud_ping_active = now;
         }
     }
+
     if (priv->registered == 0 && ++priv->disconnected_check_times % 6 == 0) {
         cloud_mqtt_event_callback(mgr, "disconnected");
     }

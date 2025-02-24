@@ -87,15 +87,12 @@ void local_mqtt_msg_callback(struct mg_connection *c, struct mg_str topic, struc
     }
     cJSON_Delete(root);
 
-
-    // TODO
-    char *pub_topic = "TEST";
-    struct mg_str pubt = mg_str(pub_topic);
+    struct mg_str pubt = mg_str(priv->cfg.opts->topic_pub);
     struct mg_mqtt_opts pub_opts;
     memset(&pub_opts, 0, sizeof(pub_opts));
     pub_opts.topic = pubt;
     pub_opts.message = data;
-    pub_opts.qos = MQTT_QOS, pub_opts.retain = false;
+    pub_opts.qos = priv->cfg.opts->cloud_mqtt_qos, pub_opts.retain = false;
     mg_mqtt_pub(priv->cloud_mqtt_conn, &pub_opts);
     MG_DEBUG(("pub %.*s -> %.*s", (int) data.len, data.ptr,
         (int) pubt.len, pubt.ptr));
