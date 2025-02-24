@@ -106,6 +106,22 @@ void local_mqtt_msg_callback(struct mg_connection *c, struct mg_str topic, struc
 
 }
 
+/*
+{
+        "method":       "call",
+        "param":        ["plugin/unicom/callback", "handler", {
+                        "topic":        "report_timer",   //if topic is report_timer, it's a timer report
+                        "to":   "mg/iot-client/channel",  //response reply to. async response
+                        "data": {
+                                "method":       "call",
+                                "param":        ["ubus", "call", {
+                                                "object":       "system",
+                                                "method":       "board"
+                                        }]
+                        }
+                }]
+}
+*/
 
 void cloud_mqtt_msg_callback(struct mg_connection *c, struct mg_str topic, struct mg_str data) {
     // receive from cloud mqtt

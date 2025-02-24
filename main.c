@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
         .cloud_mqtts_cert = NULL,
         .cloud_mqtts_certkey = NULL,
 
-        .dns4_url = "udp://119.29.29.29:53",
+        .dns4_url = "udp://119.29.29.29:53", //if you want to use your own dns server, please change this, in a router, perfer to use udp://127.0.0.1:53
         .dns4_timeout = 6,
 
         .callback_lua = LUA_CALLBACK_SCRIPT,

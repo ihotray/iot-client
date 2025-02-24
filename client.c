@@ -80,12 +80,12 @@ int client_init(void **priv, void *opts) {
     p = calloc(1, sizeof(struct client_private));
     if (!p)
         return -1;
-    
+
     //生成client id
     char rnd[10];
     mg_random(rnd, sizeof(rnd));
     mg_hex(rnd, sizeof(rnd), p->client_id);
-    
+
     p->cfg.opts = opts;
     mg_log_set(p->cfg.opts->debug_level);
 
