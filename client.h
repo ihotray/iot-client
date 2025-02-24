@@ -31,7 +31,7 @@ struct client_option {
 
 struct client_config {
     struct client_option *opts;
-    void *cloud_mqtt_cfg;
+    void *cloud_mqtt_cfg; //a cJSON object, cJSON_Delete it when it's no longer needed
 };
 
 struct client_private {

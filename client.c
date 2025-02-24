@@ -115,6 +115,8 @@ void client_run(void *handle) {
 
 void client_exit(void *handle) {
     struct client_private *priv = (struct client_private *)handle;
+    if (priv->cfg.cloud_mqtt_cfg)
+        cJSON_Delete(priv->cfg.cloud_mqtt_cfg);
     mg_mgr_free(&priv->mgr);
     free(handle);
 }
