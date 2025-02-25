@@ -128,8 +128,8 @@ void cloud_mqtt_msg_callback(struct mg_connection *c, struct mg_str topic, struc
     cJSON_AddStringToObject(root, FIELD_METHOD, "call");
 
     cJSON *param = cJSON_CreateArray();
-    cJSON_AddItemToArray(param, cJSON_CreateString("plugin/unicom/callback"));
-    cJSON_AddItemToArray(param, cJSON_CreateString("handler"));
+    cJSON_AddItemToArray(param, cJSON_CreateString(priv->cfg.opts->module));
+    cJSON_AddItemToArray(param, cJSON_CreateString(priv->cfg.opts->func));
 
     cJSON *args = cJSON_CreateObject();
     char *s_topic = mg_mprintf("%.*s", (int) topic.len, topic.ptr);

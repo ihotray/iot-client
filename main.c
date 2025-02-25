@@ -17,9 +17,11 @@ static void usage(const char *prog, struct client_option *default_opts) {
         "  -d ADDR  - dns server address, default: '%s'\n"
         "  -t n     - dns server timeout, default: %d\n"
         "  -x PATH  - client connected/disconnected callback script, default: '%s'\n"
+        "  -m PATH  - iot-rpcd lua callback script path, default: '%s'\n"
+        "  -f NAME  - iot-rpcd lua callback script entrypoint, default: '%s'\n"
         "  -v LEVEL - debug level, from 0 to 4, default: %d\n",
         MG_VERSION, prog, opts->mqtt_serve_address, opts->mqtt_keepalive, \
-        opts->dns4_url, opts->dns4_timeout, opts->callback_lua, opts->debug_level);
+        opts->dns4_url, opts->dns4_timeout, opts->callback_lua, opts->module, opts->func, opts->debug_level);
 
     exit(EXIT_FAILURE);
 }
@@ -49,6 +51,10 @@ static void parse_args(int argc, char *argv[], struct client_option *opts) {
             opts->debug_level = atoi(argv[++i]);
         } else if( strcmp(argv[i], "-x") == 0) {
             opts->callback_lua = argv[++i];
+        } else if( strcmp(argv[i], "-m") == 0) {
+            opts->module = argv[++i];
+        } else if( strcmp(argv[i], "-f") == 0) {
+            opts->func = argv[++i];
         } else {
             usage(argv[0], opts);
         }
@@ -72,8 +78,10 @@ int main(int argc, char *argv[]) {
         .dns4_url = "udp://119.29.29.29:53", //if you want to use your own dns server, please change this, in a router, perfer to use udp://127.0.0.1:53
         .dns4_timeout = 6,
 
-        .callback_lua = LUA_CALLBACK_SCRIPT,
         .debug_level = MG_LL_INFO,
+        .callback_lua = LUA_CALLBACK_SCRIPT,
+        .module = "plugin/unicom/callback",
+        .func = "handler",
     };
 
     parse_args(argc, argv, &opts);

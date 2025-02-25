@@ -26,6 +26,8 @@ struct client_option {
 
     int debug_level;
     const char *callback_lua;
+    const char *module;
+    const char *func;
 
 };
 
