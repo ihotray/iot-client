@@ -32,7 +32,7 @@ void timer_report_fn(void *arg) {
         return;
     }
 
-    struct mg_str ret;
+    struct mg_str ret = MG_NULL_STR;
     lua_callback(arg, "gen_request", "", &ret);
 
     if (!ret.ptr) {

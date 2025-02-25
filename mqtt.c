@@ -317,7 +317,7 @@ static int cloud_mqtt_config_load(void *arg) {
     struct client_private *priv = (struct client_private*)mgr->userdata;
     cJSON *root = NULL;
 
-    struct mg_str ret;
+    struct mg_str ret = MG_NULL_STR;
     lua_callback(arg, "get_config", "", &ret);
 
     if (!ret.ptr) {
